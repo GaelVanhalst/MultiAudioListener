@@ -22,7 +22,7 @@
  */
 
 //Activate this pragma in case the sub audio needs to be shown in hierachy for debugging purposes.
-//#define ShowSubAudioSourcesInHierachy
+#define ShowSubAudioSourcesInHierachy
 
 using System.Collections;
 using UnityEngine;

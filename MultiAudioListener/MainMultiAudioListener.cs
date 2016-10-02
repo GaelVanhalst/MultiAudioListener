@@ -151,8 +151,6 @@ namespace Assets.MultiAudioListener
                 if(_main!=null)Destroy(_main.gameObject);
                 _main = this;
             }
-
-            Debug.Log(AudioSettings.GetConfiguration().numRealVoices);
         }
     #endif
     }

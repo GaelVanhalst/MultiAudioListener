@@ -1,0 +1,9 @@
+How to use:
+-Remove all Audiolisteners from the scene.
+-Add VirtualMultiAudioListeners for each point that needs to listen to sound.
+-Use MultiAudioSource inplace of AudioSource
+
+If you want to combine this with the default one audiolistener 3D audio, then add the MainMultiAudioListener on the same object as the default Audiolistener (like main camera or player), so you can guarantee its position and orientation.
+If not, then you don't need to add it in your scene. It will be created by default.
+
+Warning: This system is possible by multiplying the amount of audiosources in the scene. The amount of audiosources that you can hear is limited by unity and the hardware it is running on. You can alter the limit of Unity in project settings: Audio.

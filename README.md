@@ -11,5 +11,5 @@ With this asset you can have multiple audio listeners/ears in the scene. This me
 
 
 # Demo:
-A demo can be found here: www.http://gaelvanhalst.com/ProjectDemos/MultiAudioListener/index.html <p>
+A demo can be found here: http://gaelvanhalst.com/ProjectDemos/MultiAudioListener/index.html <p>
 Rotate each camera to hear the direction of the sound change. Move around with both cameras to hear the effect of both cameras on different distances (volume) and direction of the fire.

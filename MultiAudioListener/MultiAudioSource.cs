@@ -303,7 +303,7 @@ namespace Assets.MultiAudioListener
 
         #endregion
         //Extra options
-        public bool OnlyPlayForClosestCamera = false;
+        public bool OnlyPlayForClosestCamera = true;
 
         //Internal components
 
@@ -387,8 +387,9 @@ namespace Assets.MultiAudioListener
                 MainMultiAudioListener.OnVirtualAudioListenerAdded += VirtualAudioListenerAdded;
                 MainMultiAudioListener.OnVirtualAudioListenerRemoved += VirtualAudioListenerRemoved;
 
-                //Play and start the play update
-                _safetyAudioSource.Play();
+				//Play and start the play update
+				_safetyAudioSource.timeSamples = 0;
+				_safetyAudioSource.Play();
                 bool hardwareChannelsLeft = _safetyAudioSource.isPlaying;
 
                 //Create all sub audio sources
@@ -406,11 +407,11 @@ namespace Assets.MultiAudioListener
             }
             else
             {
-                //The sound was still playing so we let is play again from start
-                _safetyAudioSource.Play();
+				//The sound was still playing so we let is play again from start
+				_safetyAudioSource.Play();
                 foreach (var audioSource in _subAudioSources)
                 {
-                    audioSource.Value.Play();
+					audioSource.Value.Play();
                 }
             }
 
@@ -503,7 +504,7 @@ namespace Assets.MultiAudioListener
                     tryToRebootTimer += RebootTime;
                     if (!_safetyAudioSource.isPlaying)
                     {
-                        _safetyAudioSource.Play();
+						_safetyAudioSource.Play();
                         safetyWasRebooted = true;
                         if (!_safetyAudioSource.isPlaying) hardwareChannelsLeft = false;
                     }
@@ -526,7 +527,7 @@ namespace Assets.MultiAudioListener
                             distanceClosestAudio = distance;
                             if (!closestAudio.isPlaying)
                             {
-                                closestAudio.Play();
+								closestAudio.Play();
                             }
                         }
                         else
@@ -545,8 +546,8 @@ namespace Assets.MultiAudioListener
                         }
                         else if(hardwareChannelsLeft)
                         {
-                            //Reboot the culled audio
-                            subAudioSource.Value.Play();
+							//Reboot the culled audio
+							subAudioSource.Value.Play();
                             subAudioSource.Value.timeSamples = _safetyAudioSource.timeSamples;
 
                             //If this sound gets culled all following ones will be too
@@ -645,7 +646,7 @@ namespace Assets.MultiAudioListener
 
             if (_isPlaying&& hardwareChannelsLeft)
             {
-                audioSource.Play();
+				audioSource.Play();
                 //If this sound gets culled all following will be too
                 if (!audioSource.isPlaying)
                 {
@@ -696,6 +697,9 @@ namespace Assets.MultiAudioListener
             audioSource.rolloffMode = VolumeRolloff;
             audioSource.minDistance = MinDistance;
             audioSource.maxDistance = MaxDistance;
-        }
+			audioSource.Stop();
+			audioSource.timeSamples = 0;
+
+		}
     }
 }

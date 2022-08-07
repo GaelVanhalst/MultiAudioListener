@@ -53,7 +53,7 @@ namespace Assets.MultiAudioListener
 
         //AudioSource pool
             //We limit the amount of items in the audio source pool. This number can be changed
-        private const int MaximumItemsAudioSourcePool = 256;
+        private const int MaximumItemsAudioSourcePool = 512;
         private static Queue<AudioSource> _audioSourcePool=new Queue<AudioSource>();
 
         //We add the audiosource in the pool, so that it can be reused.

@@ -70,10 +70,11 @@ namespace Assets.MultiAudioListener
                 Destroy(audioSource.gameObject);
                 return;
             }
-            audioSource.Stop();
-            audioSource.mute = true;
+			audioSource.gameObject.SetActive(false);
+			audioSource.Stop();
+			audioSource.timeSamples = 0;
+			audioSource.mute = true;
             audioSource.priority = 0;
-            audioSource.gameObject.SetActive(false);
             _audioSourcePool.Enqueue(audioSource);
         }
 

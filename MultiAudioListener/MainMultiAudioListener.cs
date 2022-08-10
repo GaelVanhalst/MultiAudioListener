@@ -22,7 +22,7 @@
  */
 
 //Activate this pragma in case the main multi audio listener needs to be shown in hierachy for debugging purposes.
-//#define ShowMultiAudioListenerInHierachy
+#define ShowMultiAudioListenerInHierachy
 
 using System;
 using System.Collections.Generic;
@@ -54,7 +54,9 @@ namespace Assets.MultiAudioListener
         //AudioSource pool
             //We limit the amount of items in the audio source pool. This number can be changed
         private const int MaximumItemsAudioSourcePool = 512;
-        private static Queue<AudioSource> _audioSourcePool=new Queue<AudioSource>();
+			//We limit the amount of audio listener to 4 SplitScreen
+		private const int MaximumVirtualAudioListener = 4;
+		private static Queue<AudioSource> _audioSourcePool = new Queue<AudioSource>();
 
         //We add the audiosource in the pool, so that it can be reused.
         /// <summary>
@@ -70,11 +72,8 @@ namespace Assets.MultiAudioListener
                 Destroy(audioSource.gameObject);
                 return;
             }
-			audioSource.gameObject.SetActive(false);
 			audioSource.Stop();
-			audioSource.timeSamples = 0;
-			audioSource.mute = true;
-            audioSource.priority = 0;
+			audioSource.gameObject.SetActive(false);
             _audioSourcePool.Enqueue(audioSource);
         }
 
@@ -85,7 +84,7 @@ namespace Assets.MultiAudioListener
         //Will be null if no valid audiosource is in pool
         public static AudioSource GetAudioSourceFromPool()
         {
-            while (_audioSourcePool.Count>0)
+            while (_audioSourcePool.Count > 0)
             {
                 var audioSource = _audioSourcePool.Dequeue();
                 if (audioSource != null)
@@ -120,16 +119,24 @@ namespace Assets.MultiAudioListener
     
         public static void AddVirtualAudioListener(VirtualMultiAudioListener virtualAudioListener)
         {
-            if(_virtualAudioListeners.Contains(virtualAudioListener))return;
+			if (_virtualAudioListeners.Count >= MaximumVirtualAudioListener)
+				return;
+            if(_virtualAudioListeners.Contains(virtualAudioListener))
+				return;
             _virtualAudioListeners.Add(virtualAudioListener);
-            if (OnVirtualAudioListenerAdded != null) OnVirtualAudioListenerAdded(virtualAudioListener);
+			virtualAudioListener.Num = _virtualAudioListeners.Count;
+			if (OnVirtualAudioListenerAdded != null)
+				OnVirtualAudioListenerAdded(virtualAudioListener);
         }
     
         public static void RemoveVirtualAudioListener(VirtualMultiAudioListener virtualAudioListener)
         {
-            _virtualAudioListeners.Remove(virtualAudioListener);
-            if (OnVirtualAudioListenerRemoved != null) OnVirtualAudioListenerRemoved(virtualAudioListener);
-        }
+			if (_virtualAudioListeners.Contains(virtualAudioListener))
+			{
+				_virtualAudioListeners.Remove(virtualAudioListener);
+	            if (OnVirtualAudioListenerRemoved != null) OnVirtualAudioListenerRemoved(virtualAudioListener);
+			}
+		}
     
         private static void CreateMainMultiAudioListener()
         {
@@ -141,7 +148,7 @@ namespace Assets.MultiAudioListener
     #endif
     
             _main._createdByManager = true;
-        }
+		}
     
     #if UNITY_EDITOR
         private void Start()

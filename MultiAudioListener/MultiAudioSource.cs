@@ -46,8 +46,6 @@ namespace Assets.MultiAudioListener
             set
             {
                 _audioClip = value;
-                //Audio clip has influence on length so safety audio source needs it
-                if (_safetyAudioSource != null) _safetyAudioSource.clip = value;
                 foreach (var subAudioSource in _subAudioSources)
                 {
                     subAudioSource.Value.clip = value;
@@ -130,7 +128,7 @@ namespace Assets.MultiAudioListener
             }
         }
 
-        [SerializeField] private bool _playOnAwake = true;
+        [SerializeField] private bool _playOnAwake = false;
 
         public bool PlayOnAwake
         {
@@ -150,8 +148,6 @@ namespace Assets.MultiAudioListener
             set
             {
                 _loop = value;
-                //Loop has influence on length so safety audio source needs it
-                if (_safetyAudioSource != null) _safetyAudioSource.loop = value;
                 foreach (var subAudioSource in _subAudioSources)
                 {
                     subAudioSource.Value.loop = value;
@@ -171,8 +167,6 @@ namespace Assets.MultiAudioListener
                 {
                     subAudioSource.Value.priority = value;
                 }
-                //Priority is important, because if safety audio stops all subs stop too
-                if (_safetyAudioSource != null) _safetyAudioSource.priority = Priority + 1;
             }
         }
 
@@ -199,8 +193,6 @@ namespace Assets.MultiAudioListener
             set
             {
                 _pitch = value;
-                //Pitch has influence on length so safety audio source needs it
-                if (_safetyAudioSource != null) _safetyAudioSource.pitch = value;
                 foreach (var subAudioSource in _subAudioSources)
                 {
                     subAudioSource.Value.pitch = value;
@@ -208,22 +200,7 @@ namespace Assets.MultiAudioListener
             }
         }
 
-        [Range(0.0f, 1.1f)] [SerializeField] private float _reverbZoneMix = 1.0f;
-
-        public float ReverbZoneMix
-        {
-            get { return _reverbZoneMix; }
-            set
-            {
-                _reverbZoneMix = value;
-                foreach (var subAudioSource in _subAudioSources)
-                {
-                    subAudioSource.Value.reverbZoneMix = value;
-                }
-            }
-        }
-
-        [Range(0.0f, 360.0f)] [SerializeField] private float _spread = 0.0f;
+		[Range(0.0f, 360.0f)] [SerializeField] private float _spread = 0.0f;
 
         public float Spread
         {
@@ -283,25 +260,15 @@ namespace Assets.MultiAudioListener
             }
         }
 
-        //Add custom curves when needed
+		//Add custom curves when needed
 
-        #endregion
-        //Extra options
-        public bool OnlyPlayForClosestCamera = true;
+		#endregion
+		//Extra options
+		public bool OnlyPlayForClosestCamera = true;
 
-        //Internal components
+		//Internal components
 
-        //Sometimes sound gets culled, because of too many sounds.
-        //Every interval (from reboot time) we will try to reboot the culled audio
-        //Note: Maybe a better system for automatic culling could be added in the future. The current system is far from perfect
-        private const float RebootTime = 1.0f;
-        private const float MaxStartRebootDelay = 1.0f;
-
-        //Safety audiosource is a mute audio source who's only purpose is to keep track of the time in a sound. This audio source will always exist even if there are no virtual audio listeners
-        //This does cost one of the 256 active sounds limit (for each active Multi Audio Source), so an improvement could be to only have one active when there are no subaudio sources
-        private AudioSource _safetyAudioSource = null;
-
-        private Dictionary<VirtualMultiAudioListener, AudioSource> _subAudioSources =
+		private Dictionary<VirtualMultiAudioListener, AudioSource> _subAudioSources =
             new Dictionary<VirtualMultiAudioListener, AudioSource>();
 
         private bool _isPlaying = false;
@@ -315,20 +282,6 @@ namespace Assets.MultiAudioListener
         public bool IsPlaying
         {
             get { return _isPlaying && !_isPaused; }
-        }
-
-        private Coroutine _update = null;
-
-        private void Awake()
-        {
-            //Create the safety audio source
-            bool hardWareChannelsLeft = false;
-            _safetyAudioSource = CreateAudioSource(0, "Safety Audio Source", ref hardWareChannelsLeft);
-            _safetyAudioSource.mute = true;
-
-            //Priority safety audio is +1 of the normal priority.
-            //This is because safety audio can become virtual before all other audio
-            _safetyAudioSource.priority = Priority+1;
         }
 
         private void OnEnable()
@@ -346,15 +299,9 @@ namespace Assets.MultiAudioListener
 
         private void OnDestroy()
         {
-            //Stop all sounds and destroy the safety audio source
             if (_isPlaying)
             {
                 Stop();
-            }
-
-            if (_safetyAudioSource != null)
-            {
-                MainMultiAudioListener.EnquequeAudioSourceInPool(_safetyAudioSource);
             }
         }
 
@@ -371,10 +318,7 @@ namespace Assets.MultiAudioListener
                 MainMultiAudioListener.OnVirtualAudioListenerAdded += VirtualAudioListenerAdded;
                 MainMultiAudioListener.OnVirtualAudioListenerRemoved += VirtualAudioListenerRemoved;
 
-				//Play and start the play update
-				_safetyAudioSource.timeSamples = 0;
-				_safetyAudioSource.Play();
-                bool hardwareChannelsLeft = _safetyAudioSource.isPlaying;
+                bool hardwareChannelsLeft = true;
 
                 //Create all sub audio sources
                 var virtualAudioListeners = MainMultiAudioListener.VirtualAudioListeners;
@@ -382,17 +326,9 @@ namespace Assets.MultiAudioListener
                 {
                     CreateSubAudioSource(virtualAudioListeners[i],ref hardwareChannelsLeft);
                 }
-				/*
-                if (_update == null)
-                {
-                    _update = StartCoroutine(PlayUpdate());
-                }
-				*/
             }
             else
             {
-                //The sound was still playing so we let is play again from start
-                _safetyAudioSource.Play();
                 foreach (var audioSource in _subAudioSources)
                 {
                     audioSource.Value.Play();
@@ -410,11 +346,6 @@ namespace Assets.MultiAudioListener
             if (!_isPlaying) return;
             _isPaused = false;
             _isPlaying = false;
-            if (_update != null)
-            {
-                StopCoroutine(_update);
-                _update = null;
-            }
 
             MainMultiAudioListener.OnVirtualAudioListenerAdded -= VirtualAudioListenerAdded;
             MainMultiAudioListener.OnVirtualAudioListenerRemoved -= VirtualAudioListenerRemoved;
@@ -428,11 +359,6 @@ namespace Assets.MultiAudioListener
                 }
             }
             _subAudioSources.Clear();
-
-            if (_safetyAudioSource != null)
-            {
-                _safetyAudioSource.Stop();
-            }
         }
 
         /// <summary>
@@ -447,7 +373,6 @@ namespace Assets.MultiAudioListener
             {
                 subAudioSource.Value.Pause();
             }
-            _safetyAudioSource.Pause();
         }
 
         /// <summary>
@@ -462,26 +387,25 @@ namespace Assets.MultiAudioListener
             {
                 subAudioSource.Value.UnPause();
             }
-            _safetyAudioSource.UnPause();
         }
 
         void Update()
         {
-            float tryToRebootTimer = RebootTime + Random.Range(0, MaxStartRebootDelay);
-            if (_safetyAudioSource.isPlaying || _isPaused||(_safetyAudioSource.loop&&_isPlaying))
+            if (_isPlaying || _isPaused)
             {
                  //Closest audioCulling
                 AudioSource closestAudio = null;
-                float distanceClosestAudio=0;
+                float distanceClosestAudio = 0;
+				bool isCurrentlyPlaying = false;
 
                 foreach (var subAudioSource in _subAudioSources)
                 {
 					//We set the mute on the correct value before we cull
 					subAudioSource.Value.mute = Mute;
 
-                    //ClosestAudioCulling
-                    if (OnlyPlayForClosestCamera)
-                    {
+					//ClosestAudioCulling
+					if (OnlyPlayForClosestCamera)
+					{
                         var distance = (subAudioSource.Key.transform.position - transform.position).sqrMagnitude;
 
                         if ((closestAudio == null) || (distance < distanceClosestAudio))
@@ -497,8 +421,12 @@ namespace Assets.MultiAudioListener
 							subAudioSource.Value.mute = true;
                     }
 					MoveSubAudioSourceToNeededLocation(subAudioSource.Key, subAudioSource.Value);
+					isCurrentlyPlaying |= subAudioSource.Value.isPlaying;
 				}
-            }
+
+				if (!isCurrentlyPlaying && !_isPaused)
+					Stop();
+			}
         }
 
         private void VirtualAudioListenerAdded(VirtualMultiAudioListener virtualAudioListener)
@@ -520,18 +448,12 @@ namespace Assets.MultiAudioListener
 
         private void CreateSubAudioSource(VirtualMultiAudioListener virtualAudioListener,ref bool hardWareChannelsLeft)
         {
-            //Take time so that the new sub audio source starts at the correct time in the sound
-            int timeSample = 0;
-            if (_safetyAudioSource != null)
-				timeSample = _safetyAudioSource.timeSamples;
-
-            var audioSource = CreateAudioSource(timeSample, "Sub Audio Source",ref hardWareChannelsLeft);
+            var audioSource = CreateAudioSource( "Sub Audio Source "+ virtualAudioListener.Num, ref hardWareChannelsLeft);
             _subAudioSources.Add(virtualAudioListener, audioSource);
             audioSource.volume = Volume*virtualAudioListener.Volume;
 
             //Do transform
             MoveSubAudioSourceToNeededLocation(virtualAudioListener, audioSource);
-            audioSource.playOnAwake = false;
         }
 
         private void MoveSubAudioSourceToNeededLocation(VirtualMultiAudioListener virtualListener,
@@ -545,7 +467,7 @@ namespace Assets.MultiAudioListener
             subAudioSource.transform.position = MainMultiAudioListener.Main.transform.TransformPoint(localPos);
         }
 
-        private AudioSource CreateAudioSource(int timeSamples, string nameSubAudioSource,ref bool hardwareChannelsLeft)
+        private AudioSource CreateAudioSource(string nameSubAudioSource,ref bool hardwareChannelsLeft)
         {
             AudioSource audioSource = MainMultiAudioListener.GetAudioSourceFromPool();
             //If no audiosource was given by pool, make a new one
@@ -561,15 +483,17 @@ namespace Assets.MultiAudioListener
 #if !ShowSubAudioSourcesInHierachy
             //We hide the sub audio source in hierarchy so that it doesn't flood it
             audioSource.gameObject.hideFlags = HideFlags.HideInHierarchy;
+			
+#else
+			audioSource.transform.SetParent(MainMultiAudioListener.Main.transform);
 #endif
 
-            SetAllValuesAudioSource(audioSource);
+			SetAllValuesAudioSource(audioSource);
 
 
             if (_isPaused)
 				audioSource.Pause();
             
-			audioSource.timeSamples = timeSamples;
 			if (_isPlaying && hardwareChannelsLeft)
 			{
 				audioSource.Play();
@@ -581,7 +505,7 @@ namespace Assets.MultiAudioListener
 			}
 			//All audio should be fully 3d
 			audioSource.spatialBlend = 1.0f;
-			//All audio doppler effect should be  zero
+			//All audio doppler effect and reverb should be  zero
 			audioSource.dopplerLevel = 0f;
 			audioSource.reverbZoneMix = 0f;
 			return audioSource;
@@ -592,14 +516,6 @@ namespace Assets.MultiAudioListener
         /// </summary>
         public void RefreshAllPropertiesAudioSources()
         {
-            if (_safetyAudioSource != null)
-            {
-                _safetyAudioSource.loop = Loop;
-                _safetyAudioSource.clip = AudioClip;
-                _safetyAudioSource.pitch = Pitch;
-                _safetyAudioSource.priority =Priority + 1;
-            }
-
             foreach (var subAudioSource in _subAudioSources)
             {
                 SetAllValuesAudioSource(subAudioSource.Value);
@@ -608,10 +524,9 @@ namespace Assets.MultiAudioListener
 
         private void SetAllValuesAudioSource(AudioSource audioSource)
         {
-			audioSource.Stop();
-			audioSource.timeSamples = 0;
 			audioSource.clip = AudioClip;
-            audioSource.outputAudioMixerGroup = Output;
+			audioSource.timeSamples = 0;
+			audioSource.outputAudioMixerGroup = Output;
             audioSource.loop = Loop;
             audioSource.mute = Mute;
             audioSource.bypassEffects = BypassEffects;
@@ -619,10 +534,11 @@ namespace Assets.MultiAudioListener
             audioSource.bypassReverbZones = BypassReverbZone;
             audioSource.pitch = Pitch;
             audioSource.priority = Priority;
-            audioSource.spread = Spread;
+			audioSource.spread = Spread;
             audioSource.rolloffMode = VolumeRolloff;
             audioSource.minDistance = MinDistance;
             audioSource.maxDistance = MaxDistance;
-        }
+			audioSource.playOnAwake = false;
+		}
     }
 }

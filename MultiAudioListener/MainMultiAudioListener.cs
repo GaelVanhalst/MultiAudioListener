@@ -22,7 +22,7 @@
  */
 
 //Activate this pragma in case the main multi audio listener needs to be shown in hierachy for debugging purposes.
-#define ShowMultiAudioListenerInHierachy
+//#define ShowMultiAudioListenerInHierachy
 
 using System;
 using System.Collections.Generic;
@@ -142,9 +142,12 @@ namespace Assets.MultiAudioListener
         {
             GameObject mainMultiAudioListener=new GameObject("MainMultiAudioListener");
             _main=mainMultiAudioListener.AddComponent<MainMultiAudioListener>();
-    #if !ShowMultiAudioListenerInHierachy
-            //We hide the sub audio source in hierarchy so that it doesn't flood it
-            _main.gameObject.hideFlags = HideFlags.HideInHierarchy;
+			AudioListener al = mainMultiAudioListener.GetComponent<AudioListener>();
+			al.velocityUpdateMode = AudioVelocityUpdateMode.Dynamic;
+
+	#if !ShowMultiAudioListenerInHierachy
+			//We hide the sub audio source in hierarchy so that it doesn't flood it
+			_main.gameObject.hideFlags = HideFlags.HideInHierarchy;
     #endif
     
             _main._createdByManager = true;

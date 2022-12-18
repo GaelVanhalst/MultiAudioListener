@@ -22,7 +22,7 @@
  */
 
 //Activate this pragma in case the sub audio needs to be shown in hierachy for debugging purposes.
-#define ShowSubAudioSourcesInHierachy
+//#define ShowSubAudioSourcesInHierachy
 
 using System.Collections;
 using UnityEngine;
@@ -389,7 +389,7 @@ namespace Assets.MultiAudioListener
             }
         }
 
-        void Update()
+        void LateUpdate()
         {
             if (_isPlaying || _isPaused)
             {
@@ -461,11 +461,16 @@ namespace Assets.MultiAudioListener
         {
             //There is no main listener so translation is not needed
             if (MainMultiAudioListener.Main == null) return;
+			// Get the position of the object relative to the virtual listener
+			Vector3 localPos = virtualListener.transform.InverseTransformPoint(transform.position);
 
-            //We calculate and translate the local pos of the audio from the virtual listener to the main listener
-            var localPos = virtualListener.transform.InverseTransformPoint(transform.position);
-            subAudioSource.transform.position = MainMultiAudioListener.Main.transform.TransformPoint(localPos);
-        }
+			//Get the relative distance
+			Vector3 distance = MainMultiAudioListener.Main.transform.TransformPoint(localPos) - subAudioSource.transform.position;
+
+			//If the distance is too small don't move it if not set the position of the subAudioSource object relative to the main audio listener
+			if (distance.sqrMagnitude > 1)
+				subAudioSource.transform.Translate(distance);
+		}
 
         private AudioSource CreateAudioSource(string nameSubAudioSource,ref bool hardwareChannelsLeft)
         {
@@ -538,6 +543,7 @@ namespace Assets.MultiAudioListener
             audioSource.rolloffMode = VolumeRolloff;
             audioSource.minDistance = MinDistance;
             audioSource.maxDistance = MaxDistance;
+			audioSource.velocityUpdateMode = AudioVelocityUpdateMode.Dynamic;
 			audioSource.playOnAwake = false;
 		}
     }

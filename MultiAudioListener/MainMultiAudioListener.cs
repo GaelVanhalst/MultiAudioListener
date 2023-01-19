@@ -53,8 +53,10 @@ namespace Assets.MultiAudioListener
 
         //AudioSource pool
             //We limit the amount of items in the audio source pool. This number can be changed
-        private const int MaximumItemsAudioSourcePool = 256;
-        private static Queue<AudioSource> _audioSourcePool=new Queue<AudioSource>();
+        private const int MaximumItemsAudioSourcePool = 512;
+			//We limit the amount of audio listener to 4 SplitScreen
+		private const int MaximumVirtualAudioListener = 4;
+		private static Queue<AudioSource> _audioSourcePool = new Queue<AudioSource>();
 
         //We add the audiosource in the pool, so that it can be reused.
         /// <summary>
@@ -70,10 +72,8 @@ namespace Assets.MultiAudioListener
                 Destroy(audioSource.gameObject);
                 return;
             }
-            audioSource.Stop();
-            audioSource.mute = true;
-            audioSource.priority = 0;
-            audioSource.gameObject.SetActive(false);
+			audioSource.Stop();
+			audioSource.gameObject.SetActive(false);
             _audioSourcePool.Enqueue(audioSource);
         }
 
@@ -84,7 +84,7 @@ namespace Assets.MultiAudioListener
         //Will be null if no valid audiosource is in pool
         public static AudioSource GetAudioSourceFromPool()
         {
-            while (_audioSourcePool.Count>0)
+            while (_audioSourcePool.Count > 0)
             {
                 var audioSource = _audioSourcePool.Dequeue();
                 if (audioSource != null)
@@ -119,28 +119,39 @@ namespace Assets.MultiAudioListener
     
         public static void AddVirtualAudioListener(VirtualMultiAudioListener virtualAudioListener)
         {
-            if(_virtualAudioListeners.Contains(virtualAudioListener))return;
+			if (_virtualAudioListeners.Count >= MaximumVirtualAudioListener)
+				return;
+            if(_virtualAudioListeners.Contains(virtualAudioListener))
+				return;
             _virtualAudioListeners.Add(virtualAudioListener);
-            if (OnVirtualAudioListenerAdded != null) OnVirtualAudioListenerAdded(virtualAudioListener);
+			virtualAudioListener.Num = _virtualAudioListeners.Count;
+			if (OnVirtualAudioListenerAdded != null)
+				OnVirtualAudioListenerAdded(virtualAudioListener);
         }
     
         public static void RemoveVirtualAudioListener(VirtualMultiAudioListener virtualAudioListener)
         {
-            _virtualAudioListeners.Remove(virtualAudioListener);
-            if (OnVirtualAudioListenerRemoved != null) OnVirtualAudioListenerRemoved(virtualAudioListener);
-        }
+			if (_virtualAudioListeners.Contains(virtualAudioListener))
+			{
+				_virtualAudioListeners.Remove(virtualAudioListener);
+	            if (OnVirtualAudioListenerRemoved != null) OnVirtualAudioListenerRemoved(virtualAudioListener);
+			}
+		}
     
         private static void CreateMainMultiAudioListener()
         {
             GameObject mainMultiAudioListener=new GameObject("MainMultiAudioListener");
             _main=mainMultiAudioListener.AddComponent<MainMultiAudioListener>();
-    #if !ShowMultiAudioListenerInHierachy
-            //We hide the sub audio source in hierarchy so that it doesn't flood it
-            _main.gameObject.hideFlags = HideFlags.HideInHierarchy;
+			AudioListener al = mainMultiAudioListener.GetComponent<AudioListener>();
+			al.velocityUpdateMode = AudioVelocityUpdateMode.Dynamic;
+
+	#if !ShowMultiAudioListenerInHierachy
+			//We hide the sub audio source in hierarchy so that it doesn't flood it
+			_main.gameObject.hideFlags = HideFlags.HideInHierarchy;
     #endif
     
             _main._createdByManager = true;
-        }
+		}
     
     #if UNITY_EDITOR
         private void Start()

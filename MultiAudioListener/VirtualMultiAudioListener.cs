@@ -29,7 +29,8 @@ namespace Assets.MultiAudioListener
     public class VirtualMultiAudioListener : MonoBehaviour
     {
         [Range(0.0f, 1.0f)]public float Volume = 1.0f;
-
+		[HideInInspector]
+		public int Num = 0;
         private void OnEnable()
         {
             MainMultiAudioListener.AddVirtualAudioListener(this);
